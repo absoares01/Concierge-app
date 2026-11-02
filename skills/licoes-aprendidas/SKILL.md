@@ -28,6 +28,13 @@ Paridades de transferência, bônus, tabelas de emissão e requisitos de entrada
 - Ignorar aeroportos alternativos na origem (CGH/VCP além de GRU) e no destino.
 - Fuso horário e "chegada no dia seguinte" em voos noturnos: confira a data do check-in do hotel.
 
+## Limites das fontes
+
+- **Seats.aero não cobre os programas brasileiros.** Não tem LATAM Pass direto (voos LATAM só aparecem via programas parceiros) e não lista Smiles nem Azul Fidelidade. Para eles, consulte o site do programa ou peça a cotação ao viajante.
+- **Chave Pro do Seats.aero é só para uso pessoal** (1.000 chamadas/dia, só cache). Uso comercial exige aprovação.
+- **O MCP do Airbnb é comunitário**, não oficial: use com moderação e nunca com `--ignore-robots-txt`.
+- **Metabuscadores podem destacar quem paga mais**, não o mais barato (caso Trivago na Austrália). Compare sempre o preço total de todas as ofertas, não só a destacada.
+
 ## Registro de casos
 
 <!-- Adicione: data — situação — o que deu errado — regra nova -->

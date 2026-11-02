@@ -29,6 +29,8 @@ Sugestão de stack:
 - **Conector MCP** da própria API para reaproveitar Kiwi, Trivago etc. sem reescrever integrações
 - **Supabase** — login, perfis de viajante, viagens salvas, histórico de conversas
 
+O primeiro módulo é o **buscador** de voos e hospedagem: arquitetura, modelo de dados, ranking e etapas em [BUSCADOR.md](BUSCADOR.md).
+
 Modelo de dados inicial:
 - `viajantes` (preferências, documentos, programas de fidelidade)
 - `viagens` (destino, datas, status: rascunho → planejada → reservada → concluída)

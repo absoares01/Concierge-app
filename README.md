@@ -71,6 +71,8 @@ python3 scripts/distancia.py GRU LIS MAD GRU
 
 Do plugin ao aplicativo (backend com a API do Claude, Supabase, app web/mobile): veja [docs/ROADMAP.md](docs/ROADMAP.md).
 
+Projeto do buscador de voos (dinheiro e milhas) e hospedagem (hotéis e Airbnb): veja [docs/BUSCADOR.md](docs/BUSCADOR.md).
+
 ## Créditos
 
 Inspirado no [travel-hacking-toolkit](https://github.com/borski/travel-hacking-toolkit) de Michael Borohovski (MIT). Detalhes em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
