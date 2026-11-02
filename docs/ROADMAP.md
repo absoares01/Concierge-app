@@ -16,6 +16,7 @@ Use para testar e refinar com viagens reais (inclusive de clientes da assessoria
 - [ ] Rodar `/concierge:planejar-viagem` em 5 a 10 viagens reais
 - [ ] Anotar cada erro em `skills/licoes-aprendidas/SKILL.md`
 - [ ] Preencher e datar `data/programas-fidelidade.json`
+- [ ] Instalar o REA e usar `pesquisar-apps-de-viagem` para estudar 3 funcionalidades de apps de referência (registrar em `docs/pesquisas/`)
 - [ ] Criar skills específicas que fizerem falta (ex.: `transfer-aeroporto`, `restaurantes`, `seguro-viagem`)
 
 ## Fase 2 — Backend (API do Concierge)

@@ -59,6 +59,14 @@ Utilitário de distância:
 python3 scripts/distancia.py GRU LIS MAD GRU
 ```
 
+## Ferramentas de desenvolvimento
+
+`.claude/skills/` guarda skills para quem desenvolve o Concierge (não vão no plugin):
+
+| Skill | Para quê |
+|-------|----------|
+| `pesquisar-apps-de-viagem` | Usa o [REA](https://github.com/morluto/rea) para entender como funcionalidades de apps de viagem existentes funcionam e projetar uma versão própria, dentro de limites legais |
+
 ## Próximas fases
 
 Do plugin ao aplicativo (backend com a API do Claude, Supabase, app web/mobile): veja [docs/ROADMAP.md](docs/ROADMAP.md).
