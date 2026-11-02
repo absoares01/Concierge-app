@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "concierge",
+  "version": "0.1.0",
+  "description": "Concierge de viagens com IA: planeja voos, hospedagem, roteiro dia a dia, documentos e orçamento, com milhas ou dinheiro. Experimente: 'Planeje 10 dias em Portugal em maio para um casal, saindo de São Paulo'.",
+  "author": {
+    "name": "absoares01",
+    "url": "https://github.com/absoares01"
+  },
+  "homepage": "https://github.com/absoares01/concierge-app",
+  "repository": "https://github.com/absoares01/concierge-app",
+  "keywords": ["viagem", "concierge", "voos", "hoteis", "milhas", "roteiro", "travel"]
+}

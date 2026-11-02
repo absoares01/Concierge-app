@@ -1,0 +1,13 @@
+{
+  "name": "absoares01",
+  "owner": {
+    "name": "absoares01"
+  },
+  "plugins": [
+    {
+      "name": "concierge",
+      "source": "./",
+      "description": "Concierge de viagens com IA: voos, hospedagem, roteiro, documentos e orçamento."
+    }
+  ]
+}
