@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* Identidade visual: docs/DESIGN.md (terracota e creme) */
+@theme {
+  --color-creme: #faf7f2;
+  --color-areia: #f5efe6;
+  --color-realce: #f2ebe1;
+  --color-borda: #e8dec8;
+  --color-campo: #e3d5c5;
+  --color-tinta: #2b2118;
+  --color-noite: #1f1712;
+  --color-noite-borda: #5a463a;
+  --color-suave: #6e5e52;
+  --color-terracota: #a84c2a;
+  --color-terracota-escuro: #8a3d21;
+  --color-terracota-claro: #f2a27e;
+  --color-ocre: #c98a2c;
+  --color-salvia: #2d6a4f;
+  --color-salvia-fundo: #e3efe8;
+  --color-salvia-escuro: #1e4d38;
+  --color-aviso-fundo: #fbf0dd;
+  --color-aviso: #7a5212;
+  --color-erro: #b91c1c;
+
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-script: "Caveat", cursive;
+
+  --radius-campo: 12px;
+}
+
+/* Estilos base dentro de @layer base para que as classes utilitárias
+   (ex.: text-creme num link-botão) possam sobrescrevê-los. */
+@layer base {
+  html,
+  body {
+    background: var(--color-creme);
+    color: var(--color-tinta);
+    font-family: var(--font-sans);
+  }
+
+  a {
+    color: var(--color-terracota);
+  }
+  a:hover {
+    color: var(--color-terracota-escuro);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-terracota);
+    outline-offset: 2px;
+  }
+}
+
+@media print {
+  .nao-imprimir {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+}

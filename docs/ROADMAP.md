@@ -19,7 +19,11 @@ Use para testar e refinar com viagens reais (inclusive de clientes da assessoria
 - [ ] Instalar o REA e usar `pesquisar-apps-de-viagem` para estudar 3 funcionalidades de apps de referência (registrar em `docs/pesquisas/`)
 - [ ] Criar skills específicas que fizerem falta (ex.: `transfer-aeroporto`, `restaurantes`, `seguro-viagem`)
 
-## Fase 2 — Backend (API do Concierge)
+## Fase 2 — App da assessoria (em andamento, pasta `web/`)
+
+Primeira versão construída: login com papéis equipe/cliente, clientes, viagens, buscas reais (Google Flights e Google Hotels via SerpApi), itens manuais (milhas, Airbnb, passeios), roteiro, checklist e página do cliente em modo leitura. Próximos passos: chat com o Concierge dentro do app, versões da proposta (rodadas de ajuste), acompanhamento financeiro e alertas de preço.
+
+### Plano original da Fase 2
 
 Um serviço que chama a API do Claude com o mesmo `CLAUDE.md` como system prompt e expõe as fontes como *tools*.
 
