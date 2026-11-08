@@ -9,6 +9,11 @@
 -- não a tela: mesmo que alguém tente acessar outro endereço, o banco recusa.
 -- =====================================================================
 
+-- Funções auxiliares ficam no esquema "privado", fora da API pública.
+create schema if not exists privado;
+revoke all on schema privado from public, anon;
+grant usage on schema privado to authenticated;
+
 -- ---------- Perfis (papel de cada login) ----------
 create table if not exists public.perfis (
   user_id    uuid primary key references auth.users(id) on delete cascade,
@@ -19,7 +24,7 @@ create table if not exists public.perfis (
 
 -- Todo login novo nasce como "cliente" (o papel mais restrito).
 -- Para tornar alguém da equipe:  update public.perfis set papel = 'equipe' where user_id = '<id>';
-create or replace function public.criar_perfil()
+create or replace function privado.criar_perfil()
 returns trigger
 language plpgsql
 security definer
@@ -36,11 +41,11 @@ $$;
 drop trigger if exists ao_criar_usuario on auth.users;
 create trigger ao_criar_usuario
   after insert on auth.users
-  for each row execute function public.criar_perfil();
+  for each row execute function privado.criar_perfil();
 
 -- Funções auxiliares usadas pelas regras. "security definer" para lerem as
 -- tabelas sem esbarrar nas próprias regras (evita recursão).
-create or replace function public.eh_equipe()
+create or replace function privado.eh_equipe()
 returns boolean
 language sql
 stable
@@ -62,7 +67,7 @@ create table if not exists public.clientes (
   criado_em       timestamptz not null default now()
 );
 
-create or replace function public.meus_clientes()
+create or replace function privado.meus_clientes()
 returns setof uuid
 language sql
 stable
@@ -92,16 +97,16 @@ create table if not exists public.viagens (
 );
 create index if not exists viagens_cliente_idx on public.viagens (cliente_id);
 
-create or replace function public.viagens_visiveis()
+create or replace function privado.viagens_visiveis()
 returns setof uuid
 language sql
 stable
 security definer
-set search_path = public
+set search_path = public, privado
 as $$
   select v.id from public.viagens v
   where v.status in ('publicada', 'concluida')
-    and v.cliente_id in (select public.meus_clientes());
+    and v.cliente_id in (select privado.meus_clientes());
 $$;
 
 -- ---------- Itens da viagem (voos, hospedagem, passeios, roteiro...) ----------
@@ -164,23 +169,28 @@ drop policy if exists checklist_equipe  on public.checklist_viagem;
 drop policy if exists checklist_cliente on public.checklist_viagem;
 
 -- Perfis: cada um lê o próprio; a equipe lê e altera todos. Ninguém muda o próprio papel.
-create policy perfis_ler    on public.perfis for select to authenticated using (user_id = auth.uid() or public.eh_equipe());
-create policy perfis_equipe on public.perfis for update to authenticated using (public.eh_equipe()) with check (public.eh_equipe());
+create policy perfis_ler    on public.perfis for select to authenticated using (user_id = auth.uid() or privado.eh_equipe());
+create policy perfis_equipe on public.perfis for update to authenticated using (privado.eh_equipe()) with check (privado.eh_equipe());
 
 -- Clientes: só a equipe (o cliente não lê esta tabela, para não ver notas internas).
-create policy clientes_equipe on public.clientes for all to authenticated using (public.eh_equipe()) with check (public.eh_equipe());
+create policy clientes_equipe on public.clientes for all to authenticated using (privado.eh_equipe()) with check (privado.eh_equipe());
 
 -- Viagens: equipe faz tudo; cliente só lê as próprias já publicadas.
-create policy viagens_equipe  on public.viagens for all    to authenticated using (public.eh_equipe()) with check (public.eh_equipe());
-create policy viagens_cliente on public.viagens for select to authenticated using (id in (select public.viagens_visiveis()));
+create policy viagens_equipe  on public.viagens for all    to authenticated using (privado.eh_equipe()) with check (privado.eh_equipe());
+create policy viagens_cliente on public.viagens for select to authenticated using (id in (select privado.viagens_visiveis()));
 
 -- Itens: equipe faz tudo; cliente lê os itens visíveis das próprias viagens publicadas.
-create policy itens_equipe  on public.itens_viagem for all    to authenticated using (public.eh_equipe()) with check (public.eh_equipe());
-create policy itens_cliente on public.itens_viagem for select to authenticated using (visivel_cliente and viagem_id in (select public.viagens_visiveis()));
+create policy itens_equipe  on public.itens_viagem for all    to authenticated using (privado.eh_equipe()) with check (privado.eh_equipe());
+create policy itens_cliente on public.itens_viagem for select to authenticated using (visivel_cliente and viagem_id in (select privado.viagens_visiveis()));
 
 -- Checklist: equipe faz tudo; cliente lê o das próprias viagens publicadas.
-create policy checklist_equipe  on public.checklist_viagem for all    to authenticated using (public.eh_equipe()) with check (public.eh_equipe());
-create policy checklist_cliente on public.checklist_viagem for select to authenticated using (viagem_id in (select public.viagens_visiveis()));
+create policy checklist_equipe  on public.checklist_viagem for all    to authenticated using (privado.eh_equipe()) with check (privado.eh_equipe());
+create policy checklist_cliente on public.checklist_viagem for select to authenticated using (viagem_id in (select privado.viagens_visiveis()));
+
+-- Funções auxiliares: só usuários logados executam (as regras acima dependem delas).
+revoke execute on all functions in schema privado from public, anon;
+grant execute on function privado.eh_equipe(), privado.meus_clientes(), privado.viagens_visiveis() to authenticated;
+revoke execute on function privado.criar_perfil() from authenticated;
 
 -- Visitantes sem login não acessam nada.
 revoke all on public.perfis, public.clientes, public.viagens, public.itens_viagem, public.checklist_viagem from anon;
