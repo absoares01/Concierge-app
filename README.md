@@ -73,6 +73,8 @@ Do plugin ao aplicativo (backend com a API do Claude, Supabase, app web/mobile):
 
 Projeto do buscador de voos (dinheiro e milhas) e hospedagem (hotéis e Airbnb): veja [docs/BUSCADOR.md](docs/BUSCADOR.md).
 
+Identidade visual (cores, fontes e padrões de tela): veja [docs/DESIGN.md](docs/DESIGN.md).
+
 ## Créditos
 
 Inspirado no [travel-hacking-toolkit](https://github.com/borski/travel-hacking-toolkit) de Michael Borohovski (MIT). Detalhes em [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
