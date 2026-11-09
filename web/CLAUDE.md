@@ -10,3 +10,4 @@ Este arquivo vale para quem programa o app. O `CLAUDE.md` da raiz descreve o age
 - O cliente não lê a tabela `clientes` (por causa de `notas_internas`). Não crie colunas internas em `viagens`, `itens_viagem` ou `checklist_viagem`: o cliente lê todas as colunas delas.
 - Cores, fontes e raios: tokens em `app/globals.css`, documentados em `../docs/DESIGN.md`.
 - Antes de concluir: `npm run typecheck`, `npm run test:logic`, `npm run test:rls`, `npm run build`.
+- **Conduta no GitHub:** siga `../docs/BOAS-PRATICAS-GITHUB.md` (a conta já foi suspensa uma vez). Nada de cópias de projetos de terceiros, segredos, executáveis ou ações automáticas em massa. A mesclagem na `main` é feita por uma pessoa.
