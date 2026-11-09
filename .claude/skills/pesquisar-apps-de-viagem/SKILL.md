@@ -11,7 +11,7 @@ Esta skill é para **desenvolver o Concierge**, não para atender viajantes. Ela
 
 ## 1. Instalação (fonte oficial)
 
-Instale sempre a partir do projeto oficial [morluto/rea](https://github.com/morluto/rea), do site [rea.tools](https://rea.tools/) ou do pacote npm `rea-agents`. O repositório `absoares01/REA` é uma cópia de referência para estudo; o próprio REA avisa que cópias não garantem um download oficial.
+Instale sempre a partir do projeto oficial [morluto/rea](https://github.com/morluto/rea), do site [rea.tools](https://rea.tools/) ou do pacote npm `rea-agents`. Nunca suba uma cópia do REA (ou de qualquer projeto de terceiros) para a conta do GitHub: use o fork oficial ou o pacote npm. Cópias com o mesmo nome se parecem com repositórios falsos que espalham malware (ver `docs/BOAS-PRATICAS-GITHUB.md`).
 
 **Opção A — plugin do Claude Code** (traz a skill oficial e registra o servidor `rea`):
 

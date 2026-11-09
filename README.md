@@ -6,6 +6,10 @@ Use IA para criar um serviço de concierge e planejar toda a logística de viage
 >
 > O Concierge busca voos e hotéis em várias fontes, compara com o uso de milhas, monta o roteiro e entrega o plano de reservas, com números.
 
+## O app (pasta `web/`)
+
+O carro-chefe da Soares pelo Mundo: área da **equipe** (clientes, viagens, buscas reais de voos e hospedagem, roteiro, documentos) e área do **cliente** (modo leitura da própria viagem, com links de compra). Como colocar no ar: [web/README.md](web/README.md).
+
 ## Como funciona
 
 O projeto segue a arquitetura do [travel-hacking-toolkit](https://github.com/borski/travel-hacking-toolkit), adaptada para o viajante brasileiro e ampliada além de voos e milhas:
