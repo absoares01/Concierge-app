@@ -7,6 +7,8 @@ import type { Cliente, Viagem } from "@/lib/types";
 import { atualizarCliente, criarViagem, liberarAcesso, revogarAcesso } from "../../acoes";
 import { CamposViagem } from "@/components/CamposViagem";
 import { AreaTexto, Botao, Campo, Cartao, Etiqueta, Subtitulo, Titulo, Vazio } from "@/components/ui";
+import { BotaoEnviar } from "@/components/BotaoEnviar";
+import { RemoverCliente } from "@/components/RemoverCliente";
 
 const corStatus = { rascunho: "aviso", publicada: "verde", concluida: "neutra" } as const;
 
@@ -25,7 +27,9 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
 
   return (
     <>
-      <Titulo sobretitulo="cliente">{cliente.nome}</Titulo>
+      <Titulo sobretitulo="cliente" acoes={<RemoverCliente clienteId={cliente.id} nome={cliente.nome} viagens={(viagens ?? []).length} compacto />}>
+        {cliente.nome}
+      </Titulo>
 
       <div className="flex flex-wrap items-start gap-6">
         <div className="flex min-w-0 flex-[2_1_480px] flex-col gap-6">
@@ -57,9 +61,9 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
               <input type="hidden" name="cliente_id" value={cliente.id} />
               <Subtitulo>Nova viagem</Subtitulo>
               <CamposViagem />
-              <Botao type="submit" className="self-start">
+              <BotaoEnviar className="self-start" enviando="Criando…">
                 Criar viagem
-              </Botao>
+              </BotaoEnviar>
             </form>
           </Cartao>
         </div>
@@ -83,9 +87,9 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
                 )}
                 <form action={revogarAcesso}>
                   <input type="hidden" name="cliente_id" value={cliente.id} />
-                  <Botao type="submit" variante="perigo" className="w-full">
+                  <BotaoEnviar variante="perigo" className="w-full" enviando="Removendo…">
                     Remover acesso
-                  </Botao>
+                  </BotaoEnviar>
                 </form>
               </>
             ) : (
@@ -97,9 +101,15 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
                 {!adminConfigurado() && <p className="text-sm text-aviso">Falta a variável SUPABASE_SERVICE_ROLE_KEY no servidor.</p>}
                 <form action={liberarAcesso}>
                   <input type="hidden" name="cliente_id" value={cliente.id} />
-                  <Botao type="submit" className="w-full" disabled={!cliente.email || !adminConfigurado()}>
-                    Liberar acesso
-                  </Botao>
+                  {cliente.email && adminConfigurado() ? (
+                    <BotaoEnviar className="w-full" enviando="Liberando…">
+                      Liberar acesso
+                    </BotaoEnviar>
+                  ) : (
+                    <Botao type="button" className="w-full" disabled>
+                      Liberar acesso
+                    </Botao>
+                  )}
                 </form>
               </>
             )}
@@ -113,9 +123,7 @@ export default async function ClienteDetalhe({ params }: { params: Promise<{ id:
               <Campo rotulo="E-mail" id="email" type="email" defaultValue={cliente.email ?? ""} />
               <Campo rotulo="Telefone / WhatsApp" id="telefone" defaultValue={cliente.telefone ?? ""} />
               <AreaTexto rotulo="Notas internas (o cliente não vê)" id="notas_internas" defaultValue={cliente.notas_internas ?? ""} />
-              <Botao type="submit" variante="secundario">
-                Salvar dados
-              </Botao>
+              <BotaoEnviar variante="secundario">Salvar dados</BotaoEnviar>
             </form>
           </Cartao>
         </div>

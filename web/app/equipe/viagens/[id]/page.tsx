@@ -16,6 +16,7 @@ import {
   mudarStatusViagem,
 } from "../../acoes";
 import { CamposViagem } from "@/components/CamposViagem";
+import { BotaoEnviar } from "@/components/BotaoEnviar";
 import { AreaTexto, Botao, BotaoLink, Campo, Cartao, Etiqueta, Icone, Selecao, Subtitulo, Titulo, Vazio } from "@/components/ui";
 
 const ORDEM_TIPOS = ["voo", "hospedagem", "passeio", "transporte", "seguro", "atividade", "outro"] as const;
@@ -232,9 +233,9 @@ export default async function EditorViagem({ params }: { params: Promise<{ id: s
                 <input type="checkbox" name="visivel_cliente" defaultChecked className="h-[18px] w-[18px] accent-terracota" />
                 Mostrar ao cliente
               </label>
-              <Botao type="submit" className="self-start">
+              <BotaoEnviar className="self-start" enviando="Adicionando…">
                 Adicionar item
-              </Botao>
+              </BotaoEnviar>
             </form>
           </Cartao>
         </div>
@@ -290,9 +291,9 @@ export default async function EditorViagem({ params }: { params: Promise<{ id: s
                 <option value="atencao">Atenção</option>
                 <option value="ok">Ok</option>
               </Selecao>
-              <Botao type="submit" variante="secundario">
+              <BotaoEnviar variante="secundario" enviando="Adicionando…">
                 Adicionar ao checklist
-              </Botao>
+              </BotaoEnviar>
             </form>
           </Cartao>
 
@@ -301,9 +302,7 @@ export default async function EditorViagem({ params }: { params: Promise<{ id: s
               <input type="hidden" name="viagem_id" value={v.id} />
               <Subtitulo>Dados da viagem</Subtitulo>
               <CamposViagem v={v} />
-              <Botao type="submit" variante="secundario">
-                Salvar dados
-              </Botao>
+              <BotaoEnviar variante="secundario">Salvar dados</BotaoEnviar>
             </form>
           </Cartao>
 

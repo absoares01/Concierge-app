@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { exigirEquipe } from "@/lib/auth";
+import { Aviso } from "@/components/Aviso";
 import { NavEquipe } from "./NavEquipe";
 
 export default async function LayoutEquipe({ children }: { children: React.ReactNode }) {
@@ -10,6 +12,9 @@ export default async function LayoutEquipe({ children }: { children: React.React
       <main className="min-w-0 flex-[999_1_560px] px-5 pb-16 pt-8 md:px-12 md:pt-10">
         <div className="mx-auto flex max-w-[1120px] flex-col gap-7">{children}</div>
       </main>
+      <Suspense fallback={null}>
+        <Aviso />
+      </Suspense>
     </div>
   );
 }

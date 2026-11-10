@@ -82,6 +82,7 @@ const botaoVariantes = {
   secundario: "bg-white text-tinta border border-campo hover:bg-areia hover:text-tinta",
   escuro: "bg-noite text-creme border border-noite hover:bg-tinta hover:text-creme",
   perigo: "bg-white text-erro border border-campo hover:bg-red-50 hover:text-erro",
+  perigoForte: "bg-erro text-white border border-transparent hover:bg-red-800 hover:text-white",
 };
 
 type Variante = keyof typeof botaoVariantes;

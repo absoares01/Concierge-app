@@ -1,5 +1,5 @@
 import { adicionarDaBusca } from "@/app/equipe/acoes";
-import { Botao } from "./ui";
+import { BotaoEnviar } from "./BotaoEnviar";
 
 export interface OpcaoViagem {
   id: string;
@@ -40,9 +40,9 @@ export function AdicionarABusca({
           ))}
         </select>
       )}
-      <Botao type="submit" className="h-10 text-[13px]">
+      <BotaoEnviar className="h-10 text-[13px]" enviando="Adicionando…">
         Adicionar à viagem
-      </Botao>
+      </BotaoEnviar>
     </form>
   );
 }

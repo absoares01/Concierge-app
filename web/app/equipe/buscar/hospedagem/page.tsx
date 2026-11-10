@@ -3,9 +3,11 @@ import { buscarHospedagem } from "@/lib/serpapi";
 import { ranquearHospedagem } from "@/lib/ranking";
 import { brl, quando } from "@/lib/format";
 import { linkSeguro, uuidOuNulo } from "@/lib/validar";
-import { tituloDaViagem, viagensAbertas } from "@/lib/viagens-abertas";
+import { dadosDaViagem, viagensAbertas } from "@/lib/viagens-abertas";
 import type { BuscaHospedagem, Hospedagem, ResultadoHospedagem } from "@/lib/types";
 import { AdicionarABusca } from "@/components/AdicionarABusca";
+import { CamposDatas } from "@/components/CamposDatas";
+import { SeletorViagem } from "@/components/SeletorViagem";
 import { AvisoExemplo, Botao, Campo, Cartao, Etiqueta, Icone, Titulo, Vazio, cx } from "@/components/ui";
 
 type Params = Record<string, string | undefined>;
@@ -38,7 +40,8 @@ function descricao(h: Hospedagem, noites: number): string {
 
 export default async function BuscarHospedagem({ searchParams }: { searchParams: Promise<Params> }) {
   const p = await searchParams;
-  const viagemId = uuidOuNulo(p.viagem);
+  const [viagem, viagens] = await Promise.all([dadosDaViagem(uuidOuNulo(p.viagem)), viagensAbertas()]);
+  const viagemId = viagem?.id ?? null;
   const busca = lerBusca(p);
   const ordem = ORDENS.find((o) => o.id === p.ordem)?.id ?? "melhor";
 
@@ -51,7 +54,6 @@ export default async function BuscarHospedagem({ searchParams }: { searchParams:
       erro = (e as Error).message;
     }
   }
-  const [viagens, viagemTitulo] = await Promise.all([viagemId ? Promise.resolve([]) : viagensAbertas(), tituloDaViagem(viagemId)]);
 
   const ranqueados = resultado ? ranquearHospedagem(resultado.opcoes) : [];
   const melhorId = ranqueados[0]?.item.id;
@@ -67,16 +69,26 @@ export default async function BuscarHospedagem({ searchParams }: { searchParams:
 
   return (
     <>
-      <Titulo sobretitulo={viagemTitulo ? `para ${viagemTitulo}` : "hotéis e aluguel por temporada"}>Buscar hospedagem</Titulo>
+      <Titulo sobretitulo={viagem ? `para ${viagem.rotulo}` : "hotéis e aluguel por temporada"}>Buscar hospedagem</Titulo>
+
+      <SeletorViagem caminho="/equipe/buscar/hospedagem" viagem={viagem} viagens={viagens} />
 
       <Cartao>
         <form method="get" className="flex flex-col gap-4">
           {viagemId && <input type="hidden" name="viagem" value={viagemId} />}
           <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] items-end gap-3">
-            <Campo rotulo="Destino" id="destino" required defaultValue={p.destino ?? ""} placeholder="Ex.: Chiado, Lisboa" className="md:col-span-2" />
-            <Campo rotulo="Check-in" id="entrada" type="date" required defaultValue={p.entrada ?? ""} />
-            <Campo rotulo="Check-out" id="saida" type="date" required defaultValue={p.saida ?? ""} />
-            <Campo rotulo="Hóspedes" id="adultos" type="number" min={1} max={12} defaultValue={p.adultos ?? "2"} />
+            <Campo rotulo="Destino" id="destino" required defaultValue={p.destino || viagem?.destino || ""} placeholder="Ex.: Chiado, Lisboa" className="md:col-span-2" />
+            <CamposDatas
+              nomeInicio="entrada"
+              nomeFim="saida"
+              rotuloInicio="Check-in"
+              rotuloFim="Check-out"
+              inicioPadrao={p.entrada || viagem?.dataIda || ""}
+              fimPadrao={p.saida || viagem?.dataVolta || ""}
+              obrigatorioInicio
+              obrigatorioFim
+            />
+            <Campo rotulo="Hóspedes" id="adultos" type="number" min={1} max={12} defaultValue={p.adultos ?? String(viagem?.adultos ?? 2)} />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-sm">

@@ -3,9 +3,11 @@ import { buscarVoos } from "@/lib/serpapi";
 import { ranquearVoos } from "@/lib/ranking";
 import { brl, dataComDia, duracao, hora, quando } from "@/lib/format";
 import { iata, uuidOuNulo } from "@/lib/validar";
-import { tituloDaViagem, viagensAbertas } from "@/lib/viagens-abertas";
+import { dadosDaViagem, viagensAbertas } from "@/lib/viagens-abertas";
 import type { BuscaVoos, ResultadoVoos, Voo } from "@/lib/types";
 import { AdicionarABusca } from "@/components/AdicionarABusca";
+import { CamposDatas } from "@/components/CamposDatas";
+import { SeletorViagem } from "@/components/SeletorViagem";
 import { AvisoExemplo, Botao, Campo, Cartao, Etiqueta, Selecao, Titulo, Vazio, cx } from "@/components/ui";
 
 type Params = Record<string, string | undefined>;
@@ -38,7 +40,8 @@ function descricaoVoo(v: Voo, q: BuscaVoos): string {
 
 export default async function BuscarVoos({ searchParams }: { searchParams: Promise<Params> }) {
   const p = await searchParams;
-  const viagemId = uuidOuNulo(p.viagem);
+  const [viagem, viagens] = await Promise.all([dadosDaViagem(uuidOuNulo(p.viagem)), viagensAbertas()]);
+  const viagemId = viagem?.id ?? null;
   const busca = lerBusca(p);
   const ordem = ORDENS.find((o) => o.id === p.ordem)?.id ?? "melhor";
 
@@ -51,7 +54,6 @@ export default async function BuscarVoos({ searchParams }: { searchParams: Promi
       erro = (e as Error).message;
     }
   }
-  const [viagens, viagemTitulo] = await Promise.all([viagemId ? Promise.resolve([]) : viagensAbertas(), tituloDaViagem(viagemId)]);
 
   let lista = resultado ? ranquearVoos(resultado.voos) : [];
   if (ordem === "barato") lista = [...lista].sort((a, b) => a.item.preco! - b.item.preco!);
@@ -66,7 +68,9 @@ export default async function BuscarVoos({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <Titulo sobretitulo={viagemTitulo ? `para ${viagemTitulo}` : "preços reais do Google Flights"}>Buscar voos</Titulo>
+      <Titulo sobretitulo={viagem ? `para ${viagem.rotulo}` : "preços reais do Google Flights"}>Buscar voos</Titulo>
+
+      <SeletorViagem caminho="/equipe/buscar/voos" viagem={viagem} viagens={viagens} />
 
       <Cartao>
         <form method="get" className="flex flex-col gap-4">
@@ -74,9 +78,17 @@ export default async function BuscarVoos({ searchParams }: { searchParams: Promi
           <div className="grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] items-end gap-3">
             <Campo rotulo="Origem (IATA)" id="origem" required defaultValue={p.origem ?? ""} placeholder="GRU, VCP" />
             <Campo rotulo="Destino (IATA)" id="destino" required defaultValue={p.destino ?? ""} placeholder="LIS" />
-            <Campo rotulo="Ida" id="ida" type="date" required defaultValue={p.ida ?? ""} />
-            <Campo rotulo="Volta" id="volta" type="date" defaultValue={p.volta ?? ""} />
-            <Campo rotulo="Adultos" id="adultos" type="number" min={1} max={9} defaultValue={p.adultos ?? "1"} />
+            <CamposDatas
+              nomeInicio="ida"
+              nomeFim="volta"
+              rotuloInicio="Ida"
+              rotuloFim="Volta"
+              inicioPadrao={p.ida ?? viagem?.dataIda ?? ""}
+              fimPadrao={p.volta ?? viagem?.dataVolta ?? ""}
+              obrigatorioInicio
+              minimoDias={0}
+            />
+            <Campo rotulo="Adultos" id="adultos" type="number" min={1} max={9} defaultValue={p.adultos ?? String(viagem?.adultos ?? 1)} />
             <Selecao rotulo="Classe" id="classe" defaultValue={p.classe ?? "1"}>
               <option value="1">Econômica</option>
               <option value="2">Premium</option>
