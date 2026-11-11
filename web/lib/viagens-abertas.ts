@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "./supabase/server";
 import { periodo } from "./format";
+import { adultosDe } from "./datas";
 import type { OpcaoViagem } from "@/components/AdicionarABusca";
 
 // Viagens em andamento, para o seletor "Adicionar à viagem" das buscas.
@@ -17,11 +18,37 @@ export async function viagensAbertas(): Promise<OpcaoViagem[]> {
   );
 }
 
-export async function tituloDaViagem(id: string | null): Promise<string | null> {
+export interface DadosViagem {
+  id: string;
+  rotulo: string; // "Cliente · Título"
+  destino: string | null;
+  dataIda: string | null;
+  dataVolta: string | null;
+  adultos: number | null;
+}
+
+
+// Dados da viagem usados para pré-preencher as buscas (datas, destino, adultos).
+export async function dadosDaViagem(id: string | null): Promise<DadosViagem | null> {
   if (!id) return null;
   const supabase = await createClient();
-  const { data } = await supabase.from("viagens").select("titulo, clientes(nome)").eq("id", id).maybeSingle();
+  const { data } = await supabase.from("viagens").select("id, titulo, destino, data_ida, data_volta, viajantes, clientes(nome)").eq("id", id).maybeSingle();
   if (!data) return null;
-  const d = data as unknown as { titulo: string; clientes: { nome: string } | null };
-  return `${d.clientes?.nome ?? "—"} · ${d.titulo}`;
+  const d = data as unknown as {
+    id: string;
+    titulo: string;
+    destino: string | null;
+    data_ida: string | null;
+    data_volta: string | null;
+    viajantes: string | null;
+    clientes: { nome: string } | null;
+  };
+  return {
+    id: d.id,
+    rotulo: `${d.clientes?.nome ?? "—"} · ${d.titulo}`,
+    destino: d.destino,
+    dataIda: d.data_ida,
+    dataVolta: d.data_volta,
+    adultos: adultosDe(d.viajantes),
+  };
 }

@@ -26,18 +26,54 @@ function falhou(error: { message: string } | null) {
 export async function criarCliente(fd: FormData) {
   await exigirEquipe();
   const supabase = await createClient();
+  const nome = v.obrigatorio(fd, "nome", 120);
+  const email = v.texto(fd, "email", 200)?.toLowerCase() ?? null;
+  const telefone = v.texto(fd, "telefone", 40);
+
+  // Evita cadastro duplicado: mesmo e-mail, ou mesmo nome com o mesmo telefone
+  // (ou sem telefone, cadastrado nos últimos 10 minutos, típico de clique repetido).
+  let existente: { id: string } | null = null;
+  if (email) {
+    const { data } = await supabase.from("clientes").select("id").eq("email", email).limit(1).maybeSingle();
+    existente = data;
+  }
+  if (!existente) {
+    let consulta = supabase.from("clientes").select("id").ilike("nome", nome.replace(/[%_]/g, "\\$&"));
+    consulta = telefone
+      ? consulta.eq("telefone", telefone)
+      : consulta.is("telefone", null).gte("criado_em", new Date(Date.now() - 10 * 60 * 1000).toISOString());
+    const { data } = await consulta.limit(1).maybeSingle();
+    existente = data;
+  }
+  if (existente) redirect(`/equipe/clientes/${existente.id}?aviso=cliente-duplicado`);
+
   const { data, error } = await supabase
     .from("clientes")
-    .insert({
-      nome: v.obrigatorio(fd, "nome", 120),
-      email: v.texto(fd, "email", 200)?.toLowerCase() ?? null,
-      telefone: v.texto(fd, "telefone", 40),
-      notas_internas: v.texto(fd, "notas_internas", 4000),
-    })
+    .insert({ nome, email, telefone, notas_internas: v.texto(fd, "notas_internas", 4000) })
     .select("id")
     .single();
   falhou(error);
-  redirect(`/equipe/clientes/${data!.id}`);
+  redirect(`/equipe/clientes/${data!.id}?ok=cliente-criado`);
+}
+
+// Remove o cliente, as viagens dele (em cascata) e, se houver, o login de cliente.
+export async function excluirCliente(fd: FormData) {
+  await exigirEquipe();
+  const clienteId = v.id(fd, "cliente_id");
+  if (v.texto(fd, "confirmar", 10) !== "sim") throw new Error("Confirme a remoção.");
+  const supabase = await createClient();
+  const { data: cliente } = await supabase.from("clientes").select("user_id").eq("id", clienteId).maybeSingle();
+  const { error } = await supabase.from("clientes").delete().eq("id", clienteId);
+  falhou(error);
+
+  if (cliente?.user_id && adminConfigurado()) {
+    const admin = createAdminClient();
+    const { data: perfil } = await admin.from("perfis").select("papel").eq("user_id", cliente.user_id).maybeSingle();
+    // Nunca apaga login da equipe.
+    if (perfil?.papel === "cliente") await admin.auth.admin.deleteUser(cliente.user_id);
+  }
+  revalidatePath("/equipe/clientes");
+  redirect("/equipe/clientes?ok=cliente-removido");
 }
 
 export async function atualizarCliente(fd: FormData) {
@@ -55,6 +91,7 @@ export async function atualizarCliente(fd: FormData) {
     .eq("id", clienteId);
   falhou(error);
   revalidatePath(`/equipe/clientes/${clienteId}`);
+  redirect(`/equipe/clientes/${clienteId}?ok=cliente-salvo`);
 }
 
 // Cria (ou reaproveita) o login do cliente e associa ao cadastro. O cliente entra
@@ -91,6 +128,7 @@ export async function liberarAcesso(fd: FormData) {
   const { error } = await supabase.from("clientes").update({ user_id: userId }).eq("id", clienteId);
   falhou(error);
   revalidatePath(`/equipe/clientes/${clienteId}`);
+  redirect(`/equipe/clientes/${clienteId}?ok=acesso-liberado`);
 }
 
 export async function revogarAcesso(fd: FormData) {
@@ -127,7 +165,7 @@ export async function criarViagem(fd: FormData) {
     .select("id")
     .single();
   falhou(error);
-  redirect(`/equipe/viagens/${data!.id}`);
+  redirect(`/equipe/viagens/${data!.id}?ok=viagem-criada`);
 }
 
 export async function atualizarViagem(fd: FormData) {
@@ -140,6 +178,7 @@ export async function atualizarViagem(fd: FormData) {
     .eq("id", viagemId);
   falhou(error);
   revalidatePath(`/equipe/viagens/${viagemId}`);
+  redirect(`/equipe/viagens/${viagemId}?ok=viagem-salva`);
 }
 
 export async function mudarStatusViagem(fd: FormData) {
@@ -200,6 +239,7 @@ export async function adicionarItem(fd: FormData) {
   });
   falhou(error);
   await tocarViagem(viagemId);
+  redirect(`/equipe/viagens/${viagemId}?ok=item-adicionado#itens`);
 }
 
 // Recebe um resultado de busca (voo ou hospedagem) já resumido pelo formulário da busca.
@@ -233,7 +273,7 @@ export async function adicionarDaBusca(fd: FormData) {
   });
   falhou(error);
   await tocarViagem(viagemId);
-  redirect(`/equipe/viagens/${viagemId}#itens`);
+  redirect(`/equipe/viagens/${viagemId}?ok=item-adicionado#itens`);
 }
 
 export async function atualizarItem(fd: FormData) {

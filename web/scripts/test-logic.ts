@@ -7,6 +7,7 @@ import { voosExemplo, hospedagensExemplo } from "../lib/exemplo";
 import { iata, linkSeguro } from "../lib/validar";
 import { dataComDia, diasEntre } from "../lib/format";
 import type { ItemViagem } from "../lib/types";
+import { adultosDe, somarDias } from "../lib/datas";
 
 let falhas = 0;
 function confere(nome: string, ok: boolean, detalhe?: unknown) {
@@ -76,6 +77,15 @@ confere("Link https é aceito", linkSeguro("https://www.flytap.com/") === "https
 confere("Códigos IATA normalizados", iata("gru, vcp x") === "GRU,VCP");
 confere("Dia da semana correto", dataComDia("2027-05-12") === "qua, 12 mai", dataComDia("2027-05-12"));
 confere("Noites entre datas", diasEntre("2027-05-13", "2027-05-19") === 6);
+
+// --- Datas automáticas e viajantes ---
+confere("Volta automática no dia seguinte", somarDias("2027-05-12", 1) === "2027-05-13");
+confere("Virada de mês", somarDias("2027-01-31", 1) === "2027-02-01");
+confere("Virada de ano", somarDias("2026-12-31", 1) === "2027-01-01");
+confere("Ano bissexto", somarDias("2028-02-28", 1) === "2028-02-29");
+confere("Adultos de '2 adultos, 1 criança'", adultosDe("2 adultos, 1 criança") === 2);
+confere("Adultos de 'casal' (sem número)", adultosDe("casal") === null);
+confere("Adultos de '4 pessoas'", adultosDe("4 pessoas") === 4);
 
 console.log(falhas === 0 ? "\nTodos os testes passaram." : `\n${falhas} teste(s) falharam.`);
 process.exit(falhas === 0 ? 0 : 1);
