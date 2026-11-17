@@ -1,4 +1,4 @@
-import type { BuscaHospedagem, BuscaVoos, Hospedagem, Voo } from "./types";
+import type { BuscaHospedagem, BuscaVoos, Hospedagem, OfertaVoo, Voo } from "./types";
 
 // DADOS DE EXEMPLO, usados só quando não há SERPAPI_KEY. Nomes propositalmente
 // fictícios para nunca serem confundidos com ofertas reais.
@@ -63,6 +63,7 @@ export function voosExemplo(q: BuscaVoos): Voo[] {
         status: bag,
         texto: bag === "incluida" ? "1 bagagem despachada incluída (exemplo)" : bag === "nao_incluida" ? "Bagagem despachada cobrada à parte (exemplo)" : "Bagagem não informada (exemplo)",
       },
+      ...(q.volta ? { tokenIda: `exemplo-ida-${i}` } : { tokenReserva: `exemplo-reserva-${i}` }),
     });
   }
   return voos;
@@ -96,4 +97,41 @@ export function hospedagensExemplo(q: BuscaHospedagem, noites: number): Hospedag
       comodidades: ["Wi-Fi", q.temporada ? "Cozinha" : "Café da manhã"],
     };
   });
+}
+
+// Voltas de exemplo (ida e volta): a mesma geração, no sentido contrário.
+export function voltasExemplo(q: BuscaVoos): Voo[] {
+  if (!q.volta) return [];
+  return voosExemplo({ ...q, origem: q.destino, destino: q.origem, ida: q.volta, volta: undefined })
+    .slice(0, 5)
+    .map((v, i) => ({ ...v, id: `exemplo-volta-${i}`, tokenReserva: `exemplo-reserva-volta-${i}` }));
+}
+
+// Sites de exemplo: nomes fictícios, sem links.
+export function ofertasExemplo(q: BuscaVoos, token: string): { ofertas: OfertaVoo[]; selecionados: Voo[] } {
+  const r = semente(token);
+  const ida = voosExemplo({ ...q, volta: undefined })[0];
+  const base = Math.round((1500 + r() * 2500) * q.adultos * (q.volta ? 1.8 : 1));
+  const vendedores = [
+    { vendedor: "Aérea Exemplo A", ehCompanhia: true, fator: 1 },
+    { vendedor: "Agência Exemplo 1", ehCompanhia: false, fator: 0.94 },
+    { vendedor: "Agência Exemplo 2", ehCompanhia: false, fator: 0.97 },
+    { vendedor: "Agência Exemplo 3", ehCompanhia: false, fator: 1.05 },
+  ];
+  return {
+    selecionados: ida ? [ida] : [],
+    ofertas: vendedores
+      .map((v) => ({
+        vendedor: v.vendedor,
+        ehCompanhia: v.ehCompanhia,
+        preco: Math.round((base * v.fator) / 10) * 10,
+        tarifa: v.ehCompanhia ? "Tarifa exemplo com bagagem" : null,
+        condicoes: v.ehCompanhia ? ["Marcação de assento (exemplo)"] : [],
+        bagagem: v.ehCompanhia ? ["1 bagagem despachada incluída (exemplo)"] : [],
+        separado: false,
+        links: [],
+        telefone: null,
+      }))
+      .sort((a, b) => a.preco - b.preco),
+  };
 }

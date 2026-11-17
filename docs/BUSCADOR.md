@@ -23,6 +23,12 @@ Um buscador único de **voos (dinheiro e milhas)** e **hospedagem (hotéis e Air
 | Google Flights (SerpAPI) | API, `SERPAPI_API_KEY` | Calendário de preços e descoberta | Preço tende a vir acima do real; usar como indicativo |
 | Skiplagged | MCP, sem chave | Opcional | Só exibir "hidden city" com aviso de risco |
 
+**No app (web/), hoje:** a busca usa o Google Flights via SerpApi. Cada voo tem:
+
+- **Ver todos os sites:** lista companhias e agências que vendem aquele voo (`booking_token` → `booking_options`), com preço, tarifa e bagagem de cada uma. Usa 1 crédito; ida e volta usa 2, porque antes é preciso escolher a volta (`departure_token`). O botão "Ir para o site" repete o envio (POST) que o próprio Google Flights faz; só é aceito destino `https://www.google.com/`.
+- **Comparar no Skyscanner:** link para a mesma busca no Skyscanner (`/transport/flights/{origem}/{destino}/{AAMMDD}/{AAMMDD}/`). Só um link: nada é lido do site. Serve para ver agências que o Google não lista, como as que vendem passagens com milhas.
+- **Etiqueta "Emitida com milhas":** itens de 123milhas, MaxMilhas e HotMilhas (pelo nome, pela fonte ou pelo domínio do link) mostram um aviso à equipe e, em versão curta, ao cliente. A lista fica em `web/lib/agencias.ts`.
+
 ### Voos com milhas
 
 | Fonte | Acesso | Cobertura | Observações |

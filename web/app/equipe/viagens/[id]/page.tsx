@@ -15,6 +15,8 @@ import {
   mudarChecklist,
   mudarStatusViagem,
 } from "../../acoes";
+import { riscoDe } from "@/lib/agencias";
+import { AvisoRisco } from "@/components/AvisoRisco";
 import { CamposViagem } from "@/components/CamposViagem";
 import { BotaoEnviar } from "@/components/BotaoEnviar";
 import { AreaTexto, Botao, BotaoLink, Campo, Cartao, Etiqueta, Icone, Selecao, Subtitulo, Titulo, Vazio } from "@/components/ui";
@@ -128,6 +130,7 @@ export default async function EditorViagem({ params }: { params: Promise<{ id: s
                   .filter((i) => i.tipo === tipo)
                   .map((i) => {
                     const link = linkSeguro(i.link_compra);
+                    const risco = riscoDe(i.fonte, i.titulo, i.link_compra);
                     return (
                       <article key={i.id} className={"flex flex-col gap-3 rounded-[18px] border bg-white px-5 py-4 " + (i.situacao === "recomendado" ? "border-terracota" : "border-borda")}>
                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -136,11 +139,13 @@ export default async function EditorViagem({ params }: { params: Promise<{ id: s
                               <strong className="font-semibold">{i.titulo}</strong>
                               <Etiqueta cor={corSituacao[i.situacao]}>{ROTULO_SITUACAO[i.situacao]}</Etiqueta>
                               {!i.visivel_cliente && <Etiqueta cor="escura">Oculto do cliente</Etiqueta>}
+                              {risco && <Etiqueta cor="aviso">Emitida com milhas</Etiqueta>}
                             </div>
                             <span className="text-sm text-suave">
                               {[i.data && dataComDia(i.data), i.hora, i.data_fim && `até ${dataComDia(i.data_fim)}`, i.local].filter(Boolean).join(" · ")}
                             </span>
                             {i.descricao && <p className="whitespace-pre-line text-sm leading-relaxed">{i.descricao}</p>}
+                            {risco && <AvisoRisco risco={risco} para="equipe" className="mt-1" />}
                             <span className="text-xs text-suave">
                               {i.fonte ?? "fonte não informada"}
                               {i.consultado_em ? ` · consultado ${quando(i.consultado_em)}` : ""}

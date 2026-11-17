@@ -1,7 +1,7 @@
 import "server-only";
-import type { Bagagem, BuscaHospedagem, BuscaVoos, Hospedagem, ResultadoHospedagem, ResultadoVoos, Trecho, Voo } from "./types";
+import type { Bagagem, BuscaHospedagem, BuscaVoos, Hospedagem, LinkOferta, OfertaVoo, ResultadoHospedagem, ResultadoOfertas, ResultadoVoltas, ResultadoVoos, Trecho, Voo } from "./types";
 import { diasEntre } from "./format";
-import { hospedagensExemplo, voosExemplo } from "./exemplo";
+import { hospedagensExemplo, ofertasExemplo, voltasExemplo, voosExemplo } from "./exemplo";
 
 // Único ponto de contato com a SerpApi (https://serpapi.com).
 //   Voos:       engine=google_flights (mesma integração do site anterior, já usada com chave real)
@@ -63,6 +63,8 @@ interface OpcaoBruta {
   price?: number;
   airline_logo?: string;
   extensions?: string[];
+  departure_token?: string;
+  booking_token?: string;
 }
 
 function lerBagagem(extensoes: string[]): { status: Bagagem; texto: string } {
@@ -111,13 +113,12 @@ export function normalizarVoo(b: OpcaoBruta): Voo | null {
     trocaAeroporto,
     conexaoLongaMin: conexoes.reduce((m, c) => Math.max(m, c.duracaoMin), 0),
     bagagem: lerBagagem(extensoes),
+    tokenIda: b.departure_token || undefined,
+    tokenReserva: b.booking_token || undefined,
   };
 }
 
-export async function buscarVoos(q: BuscaVoos): Promise<ResultadoVoos> {
-  const consultadoEm = new Date().toISOString();
-  if (!temChaveSerpApi()) return { voos: voosExemplo(q), exemplo: true, consultadoEm };
-
+function paramsVoos(q: BuscaVoos): Record<string, string> {
   const params: Record<string, string> = {
     engine: "google_flights",
     departure_id: q.origem,
@@ -130,18 +131,128 @@ export async function buscarVoos(q: BuscaVoos): Promise<ResultadoVoos> {
   };
   if (q.volta) params.return_date = q.volta;
   if (q.soDiretos) params.stops = "1";
+  return params;
+}
 
-  const body = await chamar(params);
+function lerVoos(body: Record<string, unknown>): Voo[] {
   const brutos = [...((body.best_flights as OpcaoBruta[]) ?? []), ...((body.other_flights as OpcaoBruta[]) ?? [])];
-  const voos = brutos.map(normalizarVoo).filter((v): v is Voo => v !== null);
+  return brutos.map(normalizarVoo).filter((v): v is Voo => v !== null);
+}
+
+export async function buscarVoos(q: BuscaVoos): Promise<ResultadoVoos> {
+  const consultadoEm = new Date().toISOString();
+  if (!temChaveSerpApi()) return { voos: voosExemplo(q), exemplo: true, consultadoEm };
+
+  const body = await chamar(paramsVoos(q));
   const pi = body.price_insights as { typical_price_range?: [number, number]; price_level?: string } | undefined;
   const meta = body.search_metadata as { google_flights_url?: string } | undefined;
   return {
-    voos,
+    voos: lerVoos(body),
     exemplo: false,
     consultadoEm,
     linkGoogle: meta?.google_flights_url,
     faixaTipica: pi ? { min: pi.typical_price_range?.[0], max: pi.typical_price_range?.[1], nivel: pi.price_level } : undefined,
+  };
+}
+
+// Ida e volta: depois de escolher a ida, lista as voltas possíveis (1 crédito).
+export async function buscarVoltas(q: BuscaVoos, tokenIda: string): Promise<ResultadoVoltas> {
+  const consultadoEm = new Date().toISOString();
+  if (!temChaveSerpApi()) return { voltas: voltasExemplo(q), exemplo: true, consultadoEm };
+  const body = await chamar({ ...paramsVoos(q), departure_token: tokenIda });
+  return { voltas: lerVoos(body), exemplo: false, consultadoEm };
+}
+
+// ---------------- Sites que vendem o voo (booking options) ----------------
+
+interface PedidoBruto { url?: string; post_data?: string }
+interface LadoBruto {
+  book_with?: string;
+  airline?: boolean;
+  airline_logos?: string[];
+  price?: number;
+  option_title?: string;
+  extensions?: string[];
+  baggage_prices?: string[];
+  booking_request?: PedidoBruto;
+  booking_phone?: string;
+}
+export interface OpcaoReservaBruta {
+  separate_tickets?: boolean;
+  together?: LadoBruto;
+  departing?: LadoBruto;
+  returning?: LadoBruto;
+}
+
+// Só aceita o endereço de redirecionamento do próprio Google Flights.
+function lerPedido(p: PedidoBruto | undefined, rotulo: string): LinkOferta | null {
+  if (!p?.url) return null;
+  let url: URL;
+  try {
+    url = new URL(p.url);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || url.hostname !== "www.google.com") return null;
+  const campos = Array.from(new URLSearchParams(p.post_data ?? "").entries());
+  return { rotulo, url: url.toString(), campos };
+}
+
+const textos = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x.trim() !== "") : []);
+
+export function lerOfertas(lista: OpcaoReservaBruta[]): OfertaVoo[] {
+  const ofertas: OfertaVoo[] = [];
+  for (const o of lista) {
+    if (o.together) {
+      const t = o.together;
+      if (!t.book_with) continue;
+      const link = lerPedido(t.booking_request, "Ir para o site");
+      ofertas.push({
+        vendedor: t.book_with,
+        ehCompanhia: t.airline === true,
+        preco: typeof t.price === "number" ? t.price : null,
+        tarifa: t.option_title ?? null,
+        condicoes: textos(t.extensions),
+        bagagem: textos(t.baggage_prices),
+        separado: o.separate_tickets === true,
+        links: link ? [link] : [],
+        telefone: t.booking_phone ?? null,
+        logo: t.airline_logos?.[0],
+      });
+    } else if (o.departing || o.returning) {
+      const lados = [o.departing, o.returning].filter((l): l is LadoBruto => Boolean(l?.book_with));
+      if (lados.length === 0) continue;
+      const precos = lados.map((l) => l.price);
+      ofertas.push({
+        vendedor: Array.from(new Set(lados.map((l) => l.book_with!))).join(" + "),
+        ehCompanhia: lados.every((l) => l.airline === true),
+        preco: precos.every((p): p is number => typeof p === "number") ? precos.reduce((a, b) => a + b, 0) : null,
+        tarifa: Array.from(new Set(lados.map((l) => l.option_title).filter((x): x is string => Boolean(x)))).join(" / ") || null,
+        condicoes: lados.flatMap((l) => textos(l.extensions)),
+        bagagem: lados.flatMap((l) => textos(l.baggage_prices)),
+        separado: true,
+        links: [lerPedido(o.departing?.booking_request, "Comprar a ida"), lerPedido(o.returning?.booking_request, "Comprar a volta")].filter((l): l is LinkOferta => l !== null),
+        telefone: lados.find((l) => l.booking_phone)?.booking_phone ?? null,
+        logo: lados[0].airline_logos?.[0],
+      });
+    }
+  }
+  return ofertas.sort((a, b) => (a.preco ?? Infinity) - (b.preco ?? Infinity));
+}
+
+// Lista de companhias e agências que vendem o voo escolhido (1 crédito).
+export async function buscarOfertas(q: BuscaVoos, tokenReserva: string): Promise<ResultadoOfertas> {
+  const consultadoEm = new Date().toISOString();
+  if (!temChaveSerpApi()) return { ...ofertasExemplo(q, tokenReserva), exemplo: true, consultadoEm };
+  const body = await chamar({ ...paramsVoos(q), booking_token: tokenReserva });
+  const selecionados = ((body.selected_flights as OpcaoBruta[]) ?? []).map(normalizarVoo).filter((v): v is Voo => v !== null);
+  const meta = body.search_metadata as { google_flights_url?: string } | undefined;
+  return {
+    ofertas: lerOfertas((body.booking_options as OpcaoReservaBruta[]) ?? []),
+    selecionados,
+    exemplo: false,
+    consultadoEm,
+    linkGoogle: meta?.google_flights_url,
   };
 }
 

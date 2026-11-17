@@ -106,6 +106,9 @@ export interface Voo {
   trocaAeroporto: boolean;
   conexaoLongaMin: number;
   bagagem: { status: Bagagem; texto: string };
+  // Fichas da SerpApi para abrir a lista de sites que vendem o voo (não vão para a viagem).
+  tokenIda?: string; // ida e volta: abre as opções de volta
+  tokenReserva?: string; // abre a lista de sites
 }
 
 export interface BuscaVoos {
@@ -124,6 +127,40 @@ export interface ResultadoVoos {
   consultadoEm: string;
   linkGoogle?: string;
   faixaTipica?: { min?: number; max?: number; nivel?: string };
+}
+
+// ---------- Sites que vendem um voo ----------
+export interface LinkOferta {
+  rotulo: string;
+  url: string; // sempre https://www.google.com/...
+  campos: [string, string][]; // enviados por POST, como o Google Flights faz
+}
+
+export interface OfertaVoo {
+  vendedor: string;
+  ehCompanhia: boolean;
+  preco: number | null;
+  tarifa: string | null;
+  condicoes: string[];
+  bagagem: string[];
+  separado: boolean; // ida e volta compradas em bilhetes separados
+  links: LinkOferta[];
+  telefone: string | null;
+  logo?: string;
+}
+
+export interface ResultadoVoltas {
+  voltas: Voo[];
+  exemplo: boolean;
+  consultadoEm: string;
+}
+
+export interface ResultadoOfertas {
+  ofertas: OfertaVoo[];
+  selecionados: Voo[]; // os voos escolhidos (ida e, se houver, volta)
+  exemplo: boolean;
+  consultadoEm: string;
+  linkGoogle?: string;
 }
 
 // ---------- Pesquisa de hospedagem ----------
