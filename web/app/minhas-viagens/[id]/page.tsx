@@ -7,6 +7,7 @@ import { agruparPorDia, calcularOrcamento } from "@/lib/orcamento";
 import { linkSeguro } from "@/lib/validar";
 import type { ItemChecklist, ItemViagem, Viagem } from "@/lib/types";
 import { riscoDe } from "@/lib/agencias";
+import { coordenadasDoItem, linkMapa } from "@/lib/geo";
 import { AvisoRisco } from "@/components/AvisoRisco";
 import { BotaoImprimir } from "@/components/BotaoImprimir";
 import { Cartao, Etiqueta, Icone, Subtitulo } from "@/components/ui";
@@ -18,6 +19,7 @@ const marcaChecklist = { ok: { s: "✓", c: "text-salvia" }, pendente: { s: "○
 function CartaoItem({ i }: { i: ItemViagem }) {
   const link = linkSeguro(i.link_compra);
   const risco = riscoDe(i.fonte, i.titulo, i.link_compra);
+  const ponto = i.tipo === "hospedagem" ? coordenadasDoItem(i.dados) : null;
   return (
     <article className={"flex flex-col gap-3 rounded-[20px] border bg-white px-5 py-4 " + (i.situacao === "recomendado" ? "border-[1.5px] border-terracota" : "border-borda")}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -50,6 +52,11 @@ function CartaoItem({ i }: { i: ItemViagem }) {
               className="nao-imprimir mt-1 inline-flex h-10 items-center gap-1.5 rounded-[12px] bg-terracota px-4 text-sm font-medium text-white no-underline hover:bg-terracota-escuro hover:text-white"
             >
               {i.situacao === "reservado" ? "Ver reserva" : "Comprar ou reservar"} <Icone nome="link" tamanho={15} />
+            </a>
+          )}
+          {ponto && (
+            <a href={linkMapa(ponto.lat, ponto.lon)} target="_blank" rel="noopener noreferrer" className="nao-imprimir inline-flex items-center gap-1 text-sm">
+              Ver no mapa <Icone nome="mapa" tamanho={15} />
             </a>
           )}
         </div>

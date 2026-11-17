@@ -62,6 +62,7 @@ export interface ItemViagem {
   visivel_cliente: boolean;
   ordem: number;
   criado_em: string;
+  dados?: unknown; // cópia do resultado da busca (ex.: coordenadas do hotel)
 }
 
 export type EstadoChecklist = "ok" | "pendente" | "atencao";
@@ -180,6 +181,8 @@ export interface Hospedagem {
   lon: number | null;
   ofertas: { site: string; porNoite: number | null; link: string | null }[];
   comodidades: string[];
+  notaLocal: number | null; // nota da localização no Google (0 a 5)
+  perto: { nome: string; como: string | null }[]; // ex.: "Estação Baixa-Chiado", "a pé 5 min"
 }
 
 export interface BuscaHospedagem {
@@ -195,6 +198,32 @@ export interface ResultadoHospedagem {
   exemplo: boolean;
   consultadoEm: string;
   noites: number;
+}
+
+// ---------- Calendário de preços de voos ----------
+export interface BuscaCalendario {
+  origem: string;
+  destino: string;
+  inicio: string; // primeiro dia do período (AAAA-MM-DD)
+  fim: string; // último dia do período
+  diasViagem: number | null; // null = só ida
+  adultos: number;
+  classe: 1 | 2 | 3 | 4;
+  soDiretos?: boolean;
+}
+
+export interface PrecoDia {
+  ida: string;
+  volta: string | null;
+  preco: number;
+  baixo: boolean; // até 5% acima do menor preço do período (critério do Google)
+}
+
+export interface ResultadoCalendario {
+  dias: PrecoDia[];
+  exemplo: boolean;
+  consultadoEm: string;
+  linkGoogle?: string;
 }
 
 // ---------- Ranking ----------

@@ -76,7 +76,9 @@ export function ranquearHospedagem(opcoes: Hospedagem[]): Ranqueado<Hospedagem>[
       const notaAjustada = h.nota !== null ? 3.5 + (h.nota - 3.5) * peso : 3.5;
       const critNota = 1 - Math.max(0, Math.min(1, (notaAjustada - 3) / 2));
       const critEstrelas = h.estrelas ? 1 - Math.min(1, (h.estrelas - 1) / 4) : 0.5;
-      const soma = 0.55 * nPreco(h.total!) + 0.35 * critNota + 0.1 * critEstrelas;
+      // Nota da localização no Google (0–5); sem nota, fica neutra.
+      const critLocal = h.notaLocal !== null ? 1 - Math.max(0, Math.min(1, (h.notaLocal - 2.5) / 2.5)) : 0.5;
+      const soma = 0.45 * nPreco(h.total!) + 0.3 * critNota + 0.2 * critLocal + 0.05 * critEstrelas;
       const nota = Math.round((10 * (1 - soma)) * 10) / 10;
 
       const motivos: string[] = [];
@@ -84,6 +86,7 @@ export function ranquearHospedagem(opcoes: Hospedagem[]): Ranqueado<Hospedagem>[
       if (h.nota !== null) motivos.push(`nota ${h.nota.toFixed(1).replace(".", ",")} de 5${h.avaliacoes ? ` em ${h.avaliacoes} avaliações` : ""}`);
       else motivos.push("sem nota informada");
       if (h.avaliacoes !== null && h.avaliacoes < 30) motivos.push("poucas avaliações");
+      if (h.notaLocal !== null) motivos.push(`localização ${h.notaLocal >= 4.5 ? "excelente" : h.notaLocal >= 4 ? "muito boa" : h.notaLocal >= 3.5 ? "boa" : "fraca"} (${h.notaLocal.toFixed(1).replace(".", ",")})`);
       return { item: h, nota, motivos };
     })
     .sort((a, b) => b.nota - a.nota || a.item.total! - b.item.total!);

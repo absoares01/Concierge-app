@@ -1,6 +1,6 @@
 // Testes da lógica que não depende de banco nem de internet.
 // Rode com: npm run test:logic
-import { lerOfertas, normalizarHospedagem, normalizarVoo } from "../lib/serpapi";
+import { lerCalendario, lerOfertas, normalizarHospedagem, normalizarVoo } from "../lib/serpapi";
 import { ranquearHospedagem, ranquearVoos } from "../lib/ranking";
 import { agruparPorDia, calcularOrcamento } from "../lib/orcamento";
 import { hospedagensExemplo, ofertasExemplo, voltasExemplo, voosExemplo } from "../lib/exemplo";
@@ -9,6 +9,10 @@ import { dataComDia, diasEntre } from "../lib/format";
 import type { ItemViagem } from "../lib/types";
 import { adultosDe, somarDias } from "../lib/datas";
 import { riscoDe } from "../lib/agencias";
+import { coordenadaValida, coordenadasDoItem, distanciaM, minutosAPe, textoDistancia } from "../lib/geo";
+import { precoCurto } from "../lib/hospedagem";
+import { faixaDe, faixasDePreco, gradeDoMes, mesesDoPeriodo, periodoDe, precoCelula, proximosMeses, resumoDoCalendario } from "../lib/calendario";
+import { calendarioExemplo } from "../lib/exemplo";
 import { lerBusca, linkSkyscanner, paramsDaBusca } from "../lib/busca-voos";
 
 let falhas = 0;
@@ -132,6 +136,61 @@ confere("Busca sem data é recusada", lerBusca({ origem: "GRU", destino: "LIS" }
 confere("Busca volta ao endereço", lerBusca(Object.fromEntries(new URLSearchParams(paramsDaBusca(q)))) !== null);
 confere("Link do Skyscanner ida e volta", linkSkyscanner(q) === "https://www.skyscanner.com.br/transport/flights/gru/lis/270512/270523/?adultsv2=2&cabinclass=business&rtn=1", linkSkyscanner(q));
 confere("Link do Skyscanner só ida, primeiro aeroporto", linkSkyscanner({ origem: "GRU,VCP", destino: "MCO", ida: "2027-01-05", adultos: 1, classe: 1 }) === "https://www.skyscanner.com.br/transport/flights/gru/mco/270105/?adultsv2=1&cabinclass=economy&rtn=0");
+
+// --- Hospedagem: localização e mapa ---
+const hl = normalizarHospedagem(
+  { name: "Hotel Centro", rate_per_night: { extracted_lowest: 400 }, gps_coordinates: { latitude: 38.7106, longitude: -9.1427 }, location_rating: 4.8, nearby_places: [{ name: "Estação Baixa-Chiado", transportations: [{ type: "Walking", duration: "4 min" }] }, { name: "Aeroporto", transportations: [{ type: "Taxi", duration: "20 min" }] }] },
+  3,
+)!;
+confere("Nota da localização lida", hl.notaLocal === 4.8);
+confere("Lugares próximos traduzidos", hl.perto[0].como === "a pé 4 min" && hl.perto[1].como === "de táxi 20 min", hl.perto);
+confere("Sem localização na fonte fica nula", normalizarHospedagem({ name: "X" }, 1)!.notaLocal === null);
+const longe = { ...hl, id: "longe", notaLocal: 2.6 };
+const rl = ranquearHospedagem([longe, hl]);
+confere("Melhor localização vence no empate de preço", rl[0].item.id === hl.id);
+confere("Motivo cita a localização", rl[0].motivos.some((m) => m.startsWith("localização excelente")), rl[0].motivos);
+const marquesDePombal = { lat: 38.7253, lon: -9.15 };
+const d = distanciaM({ lat: hl.lat!, lon: hl.lon! }, marquesDePombal);
+confere("Distância Chiado → Marquês de Pombal ≈ 1,75 km", d > 1600 && d < 1900, d);
+confere("Texto da distância em km", textoDistancia(1750) === "1,8 km" && textoDistancia(345) === "350 m" && textoDistancia(23000) === "23 km");
+confere("Minutos a pé", minutosAPe(800) === 13);
+confere("Coordenada 0,0 recusada", !coordenadaValida(0, 0) && coordenadaValida(-23.5, -46.6));
+confere("Coordenadas lidas do item salvo", coordenadasDoItem({ lat: 38.7, lon: -9.1 })?.lat === 38.7 && coordenadasDoItem({ lat: "x" }) === null && coordenadasDoItem(null) === null);
+confere("Preço curto no marcador", precoCurto(980) === "R$ 980" && precoCurto(3200) === "R$ 3,2 mil" && precoCurto(5000) === "R$ 5 mil");
+
+// --- Calendário de preços ---
+confere("Período do mês atual começa amanhã", JSON.stringify(periodoDe("2026-11", 1, "2026-11-16")) === JSON.stringify({ inicio: "2026-11-17", fim: "2026-11-30" }));
+confere("Período de 3 meses atravessa o ano", periodoDe("2026-12", 3, "2026-11-16")?.fim === "2027-02-28");
+confere("Mês passado é recusado", periodoDe("2026-10", 1, "2026-11-16") === null);
+confere("Último dia de mês curto acabando hoje é recusado", periodoDe("2026-11", 1, "2026-11-30") === null);
+confere("Meses do período", mesesDoPeriodo("2026-12-01", "2027-02-28").join(",") === "2026-12,2027-01,2027-02");
+confere("Próximos 12 meses", proximosMeses("2026-11-16").length === 12 && proximosMeses("2026-11-16")[2].valor === "2027-01");
+const grade = gradeDoMes("2027-01");
+confere("Janeiro de 2027 começa na sexta", grade[0].indexOf("2027-01-01") === 5 && grade.every((s) => s.length === 7), grade[0]);
+confere("Fevereiro de 2028 tem 29 dias", gradeDoMes("2028-02").flat().filter(Boolean).length === 29);
+const lim = faixasDePreco([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]);
+confere("Faixas: mais barato na 1, mais caro na 5", faixaDe(100, lim) === 1 && faixaDe(1000, lim) === 5, lim);
+confere("Preços iguais ficam na faixa do meio", faixaDe(500, faixasDePreco([500, 500, 500])) === 3);
+const cal = lerCalendario(
+  [
+    { outbound_date: "2027-01-05", return_date: "2027-01-12", price: 3200, low_price: false },
+    { outbound_date: "2027-01-05", return_date: "2027-01-12", price: 2900, low_price: true },
+    { outbound_date: "2027-01-06", price: 0 },
+    { outbound_date: "2026-12-31", price: 1000 },
+    { outbound_date: "2027-01-08", price: 4100 },
+  ],
+  "2027-01-01",
+  "2027-01-31",
+);
+confere("Calendário: um preço por dia, o menor", cal.length === 2 && cal[0].preco === 2900 && cal[0].baixo && cal[0].volta === "2027-01-12", cal);
+confere("Calendário ignora dias fora do período e preço zero", !cal.some((x) => x.ida === "2026-12-31" || x.ida === "2027-01-06"));
+const ex = calendarioExemplo({ origem: "GRU", destino: "LIS", inicio: "2027-01-01", fim: "2027-02-28", diasViagem: 7, adultos: 1, classe: 1 });
+confere("Calendário de exemplo cobre o período", ex.length === 59 && ex[0].volta === "2027-01-08");
+const res = resumoDoCalendario(ex)!;
+confere("Resumo: menor ≤ média ≤ maior", res.menor.preco <= res.media && res.media <= res.maior.preco);
+confere("Resumo por mês e por dia da semana", res.porMes.length === 2 && res.porDiaSemana.length === 7 && res.porDiaSemana[0].media <= res.porDiaSemana[6].media);
+confere("Resumo vazio é nulo", resumoDoCalendario([]) === null);
+confere("Preço da célula", precoCelula(890) === "890" && precoCelula(3250) === "3,3 mil" && precoCelula(12400) === "12 mil");
 
 console.log(falhas === 0 ? "\nTodos os testes passaram." : `\n${falhas} teste(s) falharam.`);
 process.exit(falhas === 0 ? 0 : 1);

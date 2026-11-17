@@ -1,7 +1,7 @@
 import "server-only";
-import type { Bagagem, BuscaHospedagem, BuscaVoos, Hospedagem, LinkOferta, OfertaVoo, ResultadoHospedagem, ResultadoOfertas, ResultadoVoltas, ResultadoVoos, Trecho, Voo } from "./types";
+import type { Bagagem, BuscaCalendario, BuscaHospedagem, PrecoDia, ResultadoCalendario, BuscaVoos, Hospedagem, LinkOferta, OfertaVoo, ResultadoHospedagem, ResultadoOfertas, ResultadoVoltas, ResultadoVoos, Trecho, Voo } from "./types";
 import { diasEntre } from "./format";
-import { hospedagensExemplo, ofertasExemplo, voltasExemplo, voosExemplo } from "./exemplo";
+import { calendarioExemplo, hospedagensExemplo, ofertasExemplo, voltasExemplo, voosExemplo } from "./exemplo";
 
 // Único ponto de contato com a SerpApi (https://serpapi.com).
 //   Voos:       engine=google_flights (mesma integração do site anterior, já usada com chave real)
@@ -256,6 +256,44 @@ export async function buscarOfertas(q: BuscaVoos, tokenReserva: string): Promise
   };
 }
 
+// ---------------- Calendário de preços (google_flights_calendar) ----------------
+// Uma consulta traz o menor preço de cada dia do período (1 crédito).
+
+interface PrecoBruto { outbound_date?: string; return_date?: string; price?: number; low_price?: boolean }
+
+export function lerCalendario(lista: PrecoBruto[], inicio: string, fim: string): PrecoDia[] {
+  const dias = new Map<string, PrecoDia>();
+  for (const p of lista) {
+    if (!p.outbound_date || !/^\d{4}-\d{2}-\d{2}$/.test(p.outbound_date) || typeof p.price !== "number" || p.price <= 0) continue;
+    if (p.outbound_date < inicio || p.outbound_date > fim) continue;
+    const atual = dias.get(p.outbound_date);
+    if (atual && atual.preco <= p.price) continue;
+    dias.set(p.outbound_date, { ida: p.outbound_date, volta: p.return_date ?? null, preco: p.price, baixo: p.low_price === true });
+  }
+  return Array.from(dias.values()).sort((a, b) => a.ida.localeCompare(b.ida));
+}
+
+export async function buscarCalendario(q: BuscaCalendario): Promise<ResultadoCalendario> {
+  const consultadoEm = new Date().toISOString();
+  if (!temChaveSerpApi()) return { dias: calendarioExemplo(q), exemplo: true, consultadoEm };
+  const params: Record<string, string> = {
+    engine: "google_flights_calendar",
+    departure_id: q.origem,
+    arrival_id: q.destino,
+    type: q.diasViagem ? "1" : "2",
+    date_range_start: q.inicio,
+    date_range_end: q.fim,
+    currency: "BRL",
+    adults: String(q.adultos),
+    travel_class: String(q.classe),
+  };
+  if (q.diasViagem) params.round_trip_days = String(q.diasViagem);
+  if (q.soDiretos) params.stops = "1";
+  const body = await chamar(params);
+  const meta = body.search_metadata as { google_flights_calendar_url?: string } | undefined;
+  return { dias: lerCalendario((body.prices as PrecoBruto[]) ?? [], q.inicio, q.fim), exemplo: false, consultadoEm, linkGoogle: meta?.google_flights_calendar_url };
+}
+
 // ---------------- Hospedagem ----------------
 
 interface PropriedadeBruta {
@@ -272,6 +310,21 @@ interface PropriedadeBruta {
   images?: { thumbnail?: string }[];
   amenities?: string[];
   prices?: { source?: string; link?: string; rate_per_night?: { extracted_lowest?: number } }[];
+  location_rating?: number;
+  nearby_places?: { name?: string; transportations?: { type?: string; duration?: string }[] }[];
+}
+
+const MEIO: Record<string, string> = { walking: "a pé", taxi: "de táxi", "public transport": "de transporte público", driving: "de carro" };
+
+function lerPerto(lista: PropriedadeBruta["nearby_places"]): { nome: string; como: string | null }[] {
+  return (lista ?? [])
+    .filter((l) => l.name)
+    .slice(0, 4)
+    .map((l) => {
+      const t = l.transportations?.[0];
+      const meio = t?.type ? (MEIO[t.type.toLowerCase()] ?? t.type) : null;
+      return { nome: l.name!, como: t?.duration ? [meio, t.duration].filter(Boolean).join(" ") : null };
+    });
 }
 
 export function normalizarHospedagem(p: PropriedadeBruta, noites: number): Hospedagem | null {
@@ -295,6 +348,8 @@ export function normalizarHospedagem(p: PropriedadeBruta, noites: number): Hospe
     lon: p.gps_coordinates?.longitude ?? null,
     ofertas: (p.prices ?? []).map((o) => ({ site: o.source ?? "—", porNoite: o.rate_per_night?.extracted_lowest ?? null, link: o.link ?? null })),
     comodidades: (p.amenities ?? []).slice(0, 8),
+    notaLocal: typeof p.location_rating === "number" ? p.location_rating : null,
+    perto: lerPerto(p.nearby_places),
   };
 }
 

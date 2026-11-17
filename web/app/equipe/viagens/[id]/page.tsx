@@ -16,6 +16,7 @@ import {
   mudarStatusViagem,
 } from "../../acoes";
 import { riscoDe } from "@/lib/agencias";
+import { coordenadasDoItem, linkMapa } from "@/lib/geo";
 import { AvisoRisco } from "@/components/AvisoRisco";
 import { CamposViagem } from "@/components/CamposViagem";
 import { BotaoEnviar } from "@/components/BotaoEnviar";
@@ -131,6 +132,7 @@ export default async function EditorViagem({ params }: { params: Promise<{ id: s
                   .map((i) => {
                     const link = linkSeguro(i.link_compra);
                     const risco = riscoDe(i.fonte, i.titulo, i.link_compra);
+                    const ponto = i.tipo === "hospedagem" ? coordenadasDoItem(i.dados) : null;
                     return (
                       <article key={i.id} className={"flex flex-col gap-3 rounded-[18px] border bg-white px-5 py-4 " + (i.situacao === "recomendado" ? "border-terracota" : "border-borda")}>
                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -165,6 +167,11 @@ export default async function EditorViagem({ params }: { params: Promise<{ id: s
                             {link && (
                               <a href={link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm">
                                 Abrir link <Icone nome="link" tamanho={14} />
+                              </a>
+                            )}
+                            {ponto && (
+                              <a href={linkMapa(ponto.lat, ponto.lon)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm">
+                                Ver no mapa <Icone nome="mapa" tamanho={14} />
                               </a>
                             )}
                           </div>

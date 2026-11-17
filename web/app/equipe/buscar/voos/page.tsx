@@ -56,7 +56,21 @@ export default async function BuscarVoos({ searchParams }: { searchParams: Promi
 
   return (
     <>
-      <Titulo sobretitulo={viagem ? `para ${viagem.rotulo}` : "preços reais do Google Flights"}>Buscar voos</Titulo>
+      <Titulo
+        sobretitulo={viagem ? `para ${viagem.rotulo}` : "preços reais do Google Flights"}
+        acoes={
+          <BotaoLink
+            variante="secundario"
+            href={`/equipe/buscar/voos/calendario?${new URLSearchParams(
+              Object.entries({ viagem: viagemId, origem: p.origem, destino: p.destino, mes: p.ida?.slice(0, 7), adultos: p.adultos, classe: p.classe }).filter((e): e is [string, string] => Boolean(e[1])),
+            ).toString()}`}
+          >
+            <Icone nome="calendario" tamanho={18} /> Calendário de preços
+          </BotaoLink>
+        }
+      >
+        Buscar voos
+      </Titulo>
 
       <SeletorViagem caminho="/equipe/buscar/voos" viagem={viagem} viagens={viagens} />
 
