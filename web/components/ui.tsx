@@ -190,6 +190,14 @@ const caminhos: Record<string, ReactNode> = {
       <path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
     </>
   ),
+  calendario: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
+    </>
+  ),
   check: <path d="M5 12l4 4 10-10" />,
   mais: (
     <>

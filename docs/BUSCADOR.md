@@ -44,6 +44,12 @@ Um buscador único de **voos (dinheiro e milhas)** e **hospedagem (hotéis e Air
 | LiteAPI | MCP/API, `LITEAPI_API_KEY` | Tarifa ao vivo e **reserva** (pré-reserva → reserva) | Tem sandbox; fonte de receita por comissão |
 | Airbnb | MCP comunitário `@openbnb/mcp-server-airbnb` | Aluguel por temporada | **Não oficial**: lê o site público, respeita robots.txt por padrão. Bom para protótipo; ver riscos (seção 11) |
 
+**No app (web/), hoje:** Google Hotels via SerpApi. A lista vem com um **mapa** (MapLibre GL + estilo Positron do [OpenFreeMap](https://openfreemap.org), grátis, sem chave, uso comercial permitido; os créditos do OpenStreetMap aparecem no mapa). Cada hotel mostra a **nota da localização** do Google (`location_rating`) e os **lugares próximos** (`nearby_places`). A equipe pode marcar um **ponto de referência** no mapa (evento, praia, escritório): a lista passa a mostrar a distância em linha reta e pode ser ordenada por "Mais perto". Tudo isso roda no navegador, sem gastar crédito. O "Melhor" pesa preço 45%, nota 30%, localização 20% e estrelas 5%.
+
+### Calendário de preços de voos
+
+`/equipe/buscar/voos/calendario` usa `engine=google_flights_calendar` (SerpApi): uma consulta traz o menor preço de cada dia de saída no período (até 3 meses), com a volta N dias depois ou só ida. A tela pinta os dias em 5 faixas (quintis, verde = mais barato, terracota = mais caro), destaca o dia mais barato, a média, o melhor dia da semana para sair e a comparação entre meses. Clicar num dia abre a busca completa daquela data. Custa 1 crédito por consulta.
+
 ## 3. Arquitetura
 
 ```mermaid

@@ -1,4 +1,4 @@
-import type { BuscaHospedagem, BuscaVoos, Hospedagem, OfertaVoo, Voo } from "./types";
+import type { BuscaCalendario, BuscaHospedagem, BuscaVoos, Hospedagem, OfertaVoo, PrecoDia, Voo } from "./types";
 
 // DADOS DE EXEMPLO, usados só quando não há SERPAPI_KEY. Nomes propositalmente
 // fictícios para nunca serem confundidos com ofertas reais.
@@ -88,13 +88,16 @@ export function hospedagensExemplo(q: BuscaHospedagem, noites: number): Hospedag
       total: porNoite * noites,
       link: null,
       foto: null,
-      lat: null,
-      lon: null,
+      // Pontos fictícios ao redor de um centro qualquer, só para ver o mapa funcionando.
+      lat: -23.5614 + (r() - 0.5) * 0.04,
+      lon: -46.6559 + (r() - 0.5) * 0.05,
       ofertas: [
         { site: "Site exemplo 1", porNoite, link: null },
         { site: "Site exemplo 2", porNoite: porNoite + 40, link: null },
       ],
       comodidades: ["Wi-Fi", q.temporada ? "Cozinha" : "Café da manhã"],
+      notaLocal: Math.round((3 + r() * 2) * 10) / 10,
+      perto: [{ nome: "Estação Exemplo", como: `a pé ${3 + Math.floor(r() * 12)} min` }],
     };
   });
 }
@@ -134,4 +137,28 @@ export function ofertasExemplo(q: BuscaVoos, token: string): { ofertas: OfertaVo
       }))
       .sort((a, b) => a.preco - b.preco),
   };
+}
+
+// Calendário de exemplo: sexta e domingo mais caros, terça e quarta mais baratas.
+export function calendarioExemplo(q: BuscaCalendario): PrecoDia[] {
+  const r = semente(`${q.origem}${q.destino}${q.inicio}${q.diasViagem ?? 0}`);
+  const pesoDia = [1.18, 1.02, 0.9, 0.92, 1.05, 1.25, 1.1];
+  const dias: PrecoDia[] = [];
+  const d = new Date(`${q.inicio}T12:00:00Z`);
+  const fim = new Date(`${q.fim}T12:00:00Z`);
+  while (d <= fim) {
+    const ida = d.toISOString().slice(0, 10);
+    const base = 1800 * q.adultos * (q.diasViagem ? 1.8 : 1);
+    const preco = Math.round((base * pesoDia[d.getUTCDay()] * (0.85 + r() * 0.4)) / 10) * 10;
+    let volta: string | null = null;
+    if (q.diasViagem) {
+      const v = new Date(d);
+      v.setUTCDate(v.getUTCDate() + q.diasViagem);
+      volta = v.toISOString().slice(0, 10);
+    }
+    dias.push({ ida, volta, preco, baixo: false });
+    d.setUTCDate(d.getUTCDate() + 1);
+  }
+  const menor = Math.min(...dias.map((x) => x.preco));
+  return dias.map((x) => ({ ...x, baixo: x.preco <= menor * 1.05 }));
 }
