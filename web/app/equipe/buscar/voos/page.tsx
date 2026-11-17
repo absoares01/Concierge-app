@@ -2,32 +2,20 @@ import Link from "next/link";
 import { buscarVoos } from "@/lib/serpapi";
 import { ranquearVoos } from "@/lib/ranking";
 import { brl, dataComDia, duracao, hora, quando } from "@/lib/format";
-import { iata, uuidOuNulo } from "@/lib/validar";
+import { uuidOuNulo } from "@/lib/validar";
+import { lerBusca, linkSkyscanner, paramsDaBusca, type Params } from "@/lib/busca-voos";
 import { dadosDaViagem, viagensAbertas } from "@/lib/viagens-abertas";
 import type { BuscaVoos, ResultadoVoos, Voo } from "@/lib/types";
 import { AdicionarABusca } from "@/components/AdicionarABusca";
 import { CamposDatas } from "@/components/CamposDatas";
 import { SeletorViagem } from "@/components/SeletorViagem";
-import { AvisoExemplo, Botao, Campo, Cartao, Etiqueta, Selecao, Titulo, Vazio, cx } from "@/components/ui";
-
-type Params = Record<string, string | undefined>;
+import { AvisoExemplo, Botao, BotaoLink, Campo, Cartao, Etiqueta, Icone, Selecao, Titulo, Vazio, cx } from "@/components/ui";
 
 const ORDENS = [
   { id: "melhor", rotulo: "Melhor" },
   { id: "barato", rotulo: "Mais barato" },
   { id: "rapido", rotulo: "Mais rápido" },
 ] as const;
-
-function lerBusca(p: Params): BuscaVoos | null {
-  const origem = iata(p.origem ?? null);
-  const destino = iata(p.destino ?? null);
-  const ida = p.ida && /^\d{4}-\d{2}-\d{2}$/.test(p.ida) ? p.ida : null;
-  if (!origem || !destino || !ida) return null;
-  const volta = p.volta && /^\d{4}-\d{2}-\d{2}$/.test(p.volta) ? p.volta : undefined;
-  const adultos = Math.min(9, Math.max(1, Number(p.adultos) || 1));
-  const classe = ([1, 2, 3, 4] as const).find((c) => String(c) === p.classe) ?? 1;
-  return { origem, destino, ida, volta, adultos, classe, soDiretos: p.diretos === "on" };
-}
 
 function descricaoVoo(v: Voo, q: BuscaVoos): string {
   const linhas = v.trechos.map((t) => `${t.companhia} ${t.numero}: ${t.de} ${hora(t.partida)} → ${t.para} ${hora(t.chegada)}`);
@@ -104,7 +92,7 @@ export default async function BuscarVoos({ searchParams }: { searchParams: Promi
             <Botao type="submit">Buscar</Botao>
           </div>
           <p className="text-xs text-suave">
-            Códigos de aeroporto separados por vírgula comparam alternativas (ex.: GRU, VCP). Milhas brasileiras ainda não têm fonte automática: registre a cotação como item manual na viagem.
+            Códigos de aeroporto separados por vírgula comparam alternativas (ex.: GRU, VCP). “Ver todos os sites” lista companhias e agências que vendem o voo (usa 1 crédito da SerpApi; ida e volta, 2). Milhas brasileiras ainda não têm fonte automática: registre a cotação como item manual na viagem.
           </p>
         </form>
       </Cartao>
@@ -125,11 +113,16 @@ export default async function BuscarVoos({ searchParams }: { searchParams: Promi
                 ? ` · faixa típica ${brl(resultado.faixaTipica.min)} a ${brl(resultado.faixaTipica.max)}`
                 : ""}
             </span>
-            {resultado.linkGoogle && (
-              <a href={resultado.linkGoogle} target="_blank" rel="noopener noreferrer">
-                Abrir no Google Flights
+            <span className="flex flex-wrap gap-4">
+              {resultado.linkGoogle && (
+                <a href={resultado.linkGoogle} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1">
+                  Abrir no Google Flights <Icone nome="link" tamanho={14} />
+                </a>
+              )}
+              <a href={linkSkyscanner(busca!)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1">
+                Comparar no Skyscanner <Icone nome="link" tamanho={14} />
               </a>
-            )}
+            </span>
           </div>
 
           <nav aria-label="Ordenar" className="grid grid-cols-3 gap-2">
@@ -196,25 +189,36 @@ export default async function BuscarVoos({ searchParams }: { searchParams: Promi
                   <span className="flex-[1_1_300px] text-sm text-salvia">
                     <strong className="font-semibold">Por que aqui:</strong> {motivos.join("; ")}.
                   </span>
-                  <AdicionarABusca
-                    viagemId={viagemId}
-                    viagens={viagens}
-                    exemplo={resultado!.exemplo}
-                    campos={{
-                      tipo: "voo",
-                      titulo: `${v.companhias.join(", ")} · ${v.origem} → ${v.destino}${busca!.volta ? " (ida e volta)" : ""}`,
-                      descricao: descricaoVoo(v, busca!),
-                      data: busca!.ida,
-                      hora: hora(v.partida),
-                      data_fim: busca!.volta ?? null,
-                      local: `${v.origem} → ${v.destino}`,
-                      preco: v.preco,
-                      link_compra: resultado!.linkGoogle ?? null,
-                      fonte: "Google Flights via SerpApi",
-                      consultado_em: resultado!.consultadoEm,
-                      dados: JSON.stringify(v),
-                    }}
-                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {(v.tokenReserva || v.tokenIda) && (
+                      <BotaoLink
+                        variante="secundario"
+                        className="h-10 text-[13px]"
+                        href={`/equipe/buscar/voos/ofertas?${paramsDaBusca(busca!, { viagem: viagemId ?? undefined, reserva: v.tokenReserva, ida_token: v.tokenReserva ? undefined : v.tokenIda })}`}
+                      >
+                        {v.tokenReserva ? "Ver todos os sites" : "Escolher volta e ver sites"}
+                      </BotaoLink>
+                    )}
+                    <AdicionarABusca
+                      viagemId={viagemId}
+                      viagens={viagens}
+                      exemplo={resultado!.exemplo}
+                      campos={{
+                        tipo: "voo",
+                        titulo: `${v.companhias.join(", ")} · ${v.origem} → ${v.destino}${busca!.volta ? " (ida e volta)" : ""}`,
+                        descricao: descricaoVoo(v, busca!),
+                        data: busca!.ida,
+                        hora: hora(v.partida),
+                        data_fim: busca!.volta ?? null,
+                        local: `${v.origem} → ${v.destino}`,
+                        preco: v.preco,
+                        link_compra: resultado!.linkGoogle ?? null,
+                        fonte: "Google Flights via SerpApi",
+                        consultado_em: resultado!.consultadoEm,
+                        dados: JSON.stringify({ ...v, tokenIda: undefined, tokenReserva: undefined }),
+                      }}
+                    />
+                  </div>
                 </div>
                 <details className="text-sm">
                   <summary className="cursor-pointer text-suave">Detalhes dos trechos</summary>

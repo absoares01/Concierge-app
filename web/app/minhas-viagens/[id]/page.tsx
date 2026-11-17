@@ -6,6 +6,8 @@ import { ROTULO_TIPO, brl, dataComDia, num, periodo, quando } from "@/lib/format
 import { agruparPorDia, calcularOrcamento } from "@/lib/orcamento";
 import { linkSeguro } from "@/lib/validar";
 import type { ItemChecklist, ItemViagem, Viagem } from "@/lib/types";
+import { riscoDe } from "@/lib/agencias";
+import { AvisoRisco } from "@/components/AvisoRisco";
 import { BotaoImprimir } from "@/components/BotaoImprimir";
 import { Cartao, Etiqueta, Icone, Subtitulo } from "@/components/ui";
 
@@ -15,6 +17,7 @@ const marcaChecklist = { ok: { s: "✓", c: "text-salvia" }, pendente: { s: "○
 
 function CartaoItem({ i }: { i: ItemViagem }) {
   const link = linkSeguro(i.link_compra);
+  const risco = riscoDe(i.fonte, i.titulo, i.link_compra);
   return (
     <article className={"flex flex-col gap-3 rounded-[20px] border bg-white px-5 py-4 " + (i.situacao === "recomendado" ? "border-[1.5px] border-terracota" : "border-borda")}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -51,6 +54,7 @@ function CartaoItem({ i }: { i: ItemViagem }) {
           )}
         </div>
       </div>
+      {risco && <AvisoRisco risco={risco} para="cliente" />}
       {(i.fonte || i.consultado_em) && (
         <span className="text-xs text-suave">
           {i.fonte}
